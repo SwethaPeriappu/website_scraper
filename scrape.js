@@ -82,23 +82,18 @@ function collectIntoContainer($, elements) {
 }
 
 function extractSectionHtml($, { 
-	warpSessionClass, 
-	warpSessionTag, 
 	warpSessionClasses, 
 	warpSessionTags,
-	selector,
 	selectors,
-	selectorId,
 	selectorIds,
 	excludeClasses
 }) {
 	let el = null;
 
-	// Combined: selectorId first, then warpSessionClasses (when both provided)
-	if (selectorId && warpSessionClasses && Array.isArray(warpSessionClasses)) {
+	// Combined: selectorIds first, then warpSessionClasses (when both provided)
+	if (selectorIds && Array.isArray(selectorIds) && warpSessionClasses && Array.isArray(warpSessionClasses)) {
 		const matchedElements = [];
-		const idList = Array.isArray(selectorId) ? selectorId : [selectorId];
-		for (const id of idList) {
+		for (const id of selectorIds) {
 			const found = $(`#${id}`);
 			if (found && found.length > 0) {
 				found.each((_, elem) => matchedElements.push(elem));
@@ -117,12 +112,7 @@ function extractSectionHtml($, {
 		el = collectIntoContainer($, matchedElements);
 	}
 
-	// Priority 1: Direct CSS selector (most flexible)
-	if (selector) {
-		el = $(selector).first();
-	}
-
-	// Priority 2: Multiple CSS selectors
+	// Priority 1: CSS selectors (tries each until one matches)
 	if ((!el || el.length === 0) && selectors && Array.isArray(selectors)) {
 		for (const sel of selectors) {
 			el = $(sel).first();
@@ -130,7 +120,7 @@ function extractSectionHtml($, {
 		}
 	}
 
-	// Priority 3: Multiple ID selectors (collects ALL matching IDs)
+	// Priority 2: ID selectors (collects ALL matching IDs)
 	if ((!el || el.length === 0) && selectorIds && Array.isArray(selectorIds)) {
 		const matchedElements = [];
 		for (const id of selectorIds) {
@@ -142,28 +132,7 @@ function extractSectionHtml($, {
 		el = collectIntoContainer($, matchedElements);
 	}
 
-	// Priority 4: ID selector (accepts both string and array)
-	if ((!el || el.length === 0) && selectorId) {
-		if (Array.isArray(selectorId)) {
-			const matchedElements = [];
-			for (const id of selectorId) {
-				const found = $(`#${id}`);
-				if (found && found.length > 0) {
-					found.each((_, elem) => matchedElements.push(elem));
-				}
-			}
-			el = collectIntoContainer($, matchedElements);
-		} else {
-			el = $(`#${selectorId}`).first();
-		}
-	}
-
-	// Priority 5: Single CSS class (existing)
-	if ((!el || el.length === 0) && warpSessionClass) {
-		el = $(toClassSelector(warpSessionClass)).first();
-	}
-
-	// Priority 6: Multiple CSS classes (collects ALL matching)
+	// Priority 3: CSS classes (collects ALL matching)
 	if ((!el || el.length === 0) && warpSessionClasses && Array.isArray(warpSessionClasses)) {
 		const matchedElements = [];
 		for (const className of warpSessionClasses) {
@@ -175,12 +144,7 @@ function extractSectionHtml($, {
 		el = collectIntoContainer($, matchedElements);
 	}
 
-	// Priority 7: Single HTML tag (existing)
-	if ((!el || el.length === 0) && warpSessionTag) {
-		el = $(warpSessionTag).first();
-	}
-
-	// Priority 8: Multiple HTML tags (collects ALL matching)
+	// Priority 4: HTML tags (collects ALL matching)
 	if ((!el || el.length === 0) && warpSessionTags && Array.isArray(warpSessionTags)) {
 		const matchedElements = [];
 		for (const tagName of warpSessionTags) {
@@ -300,13 +264,9 @@ function applyPattern(urls, pattern, urlEndsWith, urlPrefixes) {
 
 function extractSelectorOptions(entry) {
 	return {
-		warpSessionClass: entry.warpSessionClass,
-		warpSessionTag: entry.warpSessionTag,
 		warpSessionClasses: entry.warpSessionClasses,
 		warpSessionTags: entry.warpSessionTags,
-		selector: entry.selector,
 		selectors: entry.selectors,
-		selectorId: entry.selectorId,
 		selectorIds: entry.selectorIds,
 		excludeClasses: entry.excludeClasses
 	};
@@ -335,7 +295,7 @@ async function gatherTargets() {
 	const seen = new Set();
 	const unique = [];
 	for (const t of targets) {
-		const key = `${t.url}__${t.selector || ''}__${JSON.stringify(t.selectors || [])}__${t.selectorId || ''}__${JSON.stringify(t.selectorIds || [])}__${t.warpSessionClass || ''}__${t.warpSessionTag || ''}__${JSON.stringify(t.warpSessionClasses || [])}__${JSON.stringify(t.warpSessionTags || [])}__${JSON.stringify(t.excludeClasses || [])}`;
+		const key = `${t.url}__${JSON.stringify(t.selectors || [])}__${JSON.stringify(t.selectorIds || [])}__${JSON.stringify(t.warpSessionClasses || [])}__${JSON.stringify(t.warpSessionTags || [])}__${JSON.stringify(t.excludeClasses || [])}`;
 		if (!seen.has(key)) {
 			seen.add(key);
 			unique.push(t);

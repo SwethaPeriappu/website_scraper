@@ -2,22 +2,23 @@ export default {
 	// ── Examples (uncomment to use) ─────────────────────────────────────
 	//
 	// Selector priority (highest → lowest):
-	//   selector → selectors → selectorIds → selectorId →
-	//   warpSessionClass → warpSessionClasses → warpSessionTag → warpSessionTags
+	//   selectors → selectorIds → warpSessionClasses → warpSessionTags
+	//
+	// All selectors accept arrays only (no single-string values).
 	//
 	// Sitemap examples:
-	//   { url: "https://example.com/sitemap.xml", selector: "main article.content" }
+	//   { url: "https://example.com/sitemap.xml", selectors: ["main article.content"] }
 	//   { url: "https://example.com/sitemap.xml", selectors: ["article.doc", "div.content", "main"] }
-	//   { url: "https://example.com/sitemap.xml", selectorId: "wiki-content" }
-	//   { url: "https://example.com/sitemap.xml", warpSessionClass: "content-wrapper" }
+	//   { url: "https://example.com/sitemap.xml", selectorIds: ["wiki-content"] }
+	//   { url: "https://example.com/sitemap.xml", warpSessionClasses: ["content-wrapper"] }
 	//   { url: "https://example.com/sitemap.xml", warpSessionClasses: ["article-body", "kb-doc"] }
 	//   { url: "https://example.com/sitemap.xml", warpSessionTags: ["main", "body"], sitemapPattern: "/academy" }
-	//   { url: "https://example.com/sitemap.xml", selectorId: "help-article", warpSessionClass: "article-body" }
+	//   { url: "https://example.com/sitemap.xml", selectorIds: ["help-article"], warpSessionClasses: ["article-body"] }
 	//
 	// Standalone page examples:
-	//   { url: "https://example.com/page.html", selector: "section[data-section='features'] .content" }
+	//   { url: "https://example.com/page.html", selectors: ["section[data-section='features'] .content"] }
 	//   { url: "https://example.com/page.html", selectors: ["#about-content", ".about-section", "main > article"] }
-	//   { url: "https://example.com/page.html", selectorId: "pricing-table" }
+	//   { url: "https://example.com/page.html", selectorIds: ["pricing-table"] }
 	//
 	// Exclude classes (remove unwanted elements from extracted section):
 	//

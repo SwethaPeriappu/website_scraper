@@ -5,8 +5,7 @@ A Node.js web scraper that extracts content from sitemaps and standalone pages, 
 ## Features
 
 - **Sitemap Processing**: Automatically expands sitemap URLs and filters by patterns
-- **Flexible Selectors**: Support for CSS selectors, IDs, classes, and HTML tags
-- **Content Extraction**: Extracts specific sections using CSS selectors or HTML tags
+- **Specific Selectors**: Support for CSS selectors, IDs, classes, and HTML tags used extract specific sections
 - **Markdown Conversion**: Converts extracted HTML to clean Markdown format
 - **Concurrent Scraping**: Configurable parallel requests with rate limiting
 - **Automatic Retry**: Exponential backoff retry on network failures
@@ -40,44 +39,39 @@ Edit `input-sites.js` to configure your scraping targets:
 
 | Property | Type | Example | Description |
 |----------|------|---------|-------------|
-| `selector` | string | `"article.post > .content"` | Any valid CSS selector |
-| `selectors` | array | `["#main", "article > section"]` | Multiple CSS selectors (tries in order) |
-| `selectorId` | string | `"main-content"` | Element ID (shorthand for `#id`) |
-| `warpSessionClass` | string | `"main-section"` | Single CSS class |
-| `warpSessionClasses` | array | `["main", "content"]` | Array of CSS classes |
-| `warpSessionTag` | string | `"main"` | Single HTML tag |
-| `warpSessionTags` | array | `["main", "body"]` | Array of HTML tags |
+| `selectors` | array | `["article.post > .content", "main"]` | CSS selectors (tries in order, stops at first match) |
+| `selectorIds` | array | `["main-content", "article"]` | Element IDs (collects all matching) |
+| `warpSessionClasses` | array | `["main-section", "content"]` | CSS classes (collects all matching) |
+| `warpSessionTags` | array | `["main", "article"]` | HTML tags (collects all matching) |
+| `excludeClasses` | array/object | `["sidebar", "ads"]` | Classes to remove from extracted section |
 
-The scraper tries selectors in the priority order listed above, stopping at the first match.
+All selectors accept **arrays only**. The scraper tries selectors in the priority order listed above, stopping at the first match.
 
 ### Configuration Structure
 ```javascript
 export default {
   siteMap: [
-    // Using any CSS selector
-    { url: "https://example.com/sitemap.xml", selector: "main article.content" },
-    
-    // Multiple selectors - tries each until one matches
+    // CSS selectors - tries each until one matches
     { url: "https://docs.example.com/sitemap.xml", selectors: ["article.doc", "div.content", "main"] },
     
-    // ID selector
-    { url: "https://wiki.example.com/sitemap.xml", selectorId: "wiki-content" },
+    // ID selectors
+    { url: "https://wiki.example.com/sitemap.xml", selectorIds: ["wiki-content"] },
     
-    // Class selector with pattern filter
-    { url: "https://example.com/sitemap.xml", warpSessionClass: "content-wrapper", sitemapPattern: "/docs" },
+    // Class selectors with pattern filter
+    { url: "https://example.com/sitemap.xml", warpSessionClasses: ["content-wrapper"], sitemapPattern: "/docs" },
     
-    // Combined: ID with class fallback
-    { url: "https://help.example.com/sitemap.xml", selectorId: "help-article", warpSessionClass: "article-body" }
+    // Combined: IDs with class fallback
+    { url: "https://help.example.com/sitemap.xml", selectorIds: ["help-article"], warpSessionClasses: ["article-body"] }
   ],
   standAlonePages: [
-    // Complex CSS selector with attribute
-    { url: "https://example.com/features.html", selector: "section[data-section='features'] .content" },
+    // CSS selector with attribute
+    { url: "https://example.com/features.html", selectors: ["section[data-section='features'] .content"] },
     
     // Multiple fallback selectors
     { url: "https://example.com/about.html", selectors: ["#about-content", ".about-section", "main > article"] },
     
-    // Simple class selector
-    { url: "https://example.com/page.html", warpSessionClasses: ["main", "article-content"] }
+    // Class selectors with exclusions
+    { url: "https://example.com/page.html", warpSessionClasses: ["main", "article-content"], excludeClasses: ["sidebar", "ads"] }
   ]
 };
 ```
@@ -87,11 +81,6 @@ export default {
 ### Quick Test (Limited Pages)
 ```bash
 MAX_PAGES=5 yarn run scrape
-```
-
-### Full Scrape (All Pages)
-```bash
-yarn run scrape
 ```
 
 ### With Concurrency Settings
@@ -132,14 +121,6 @@ Contains pages that couldn't be scraped with:
 - `selectors`: The selectors that were attempted
 - `errorCode`: Error code (if applicable)
 
-#### Skip Reason Categories
-
-| Reason | Description |
-|--------|-------------|
-| `SELECTOR_NOT_FOUND` | Page was reachable but CSS selector didn't match any element |
-| `NETWORK_ERROR` | Connection refused, DNS not found, timeout |
-| `HTTP_ERROR` | Server returned 4xx or 5xx status code |
-| `UNKNOWN_ERROR` | Other unexpected errors |
 
 ## Complete Flow
 
@@ -152,7 +133,7 @@ Contains pages that couldn't be scraped with:
 4. **Deduplication**: Remove duplicate URL/selector combinations
 5. **Scraping Process**:
    - Fetch each page HTML
-   - Try selectors in order: `warpSessionClass` → `warpSessionClasses` → `warpSessionTag` → `warpSessionTags`
+   - Try selectors in order: `selectors` → `selectorIds` → `warpSessionClasses` → `warpSessionTags`
    - Extract matching section or skip if none found
    - Convert HTML to Markdown
 6. **Output Generation**:
@@ -163,18 +144,15 @@ Contains pages that couldn't be scraped with:
 ## Selector Priority
 
 The scraper tries selectors in this order:
-1. Direct CSS selector (`selector`) - most flexible, any valid CSS selector
-2. Multiple CSS selectors (`selectors`) - tries each until one matches
-3. ID selector (`selectorId`) - shorthand for `#id`
-4. Single CSS class (`warpSessionClass`)
-5. Multiple CSS classes (`warpSessionClasses`) - tries each until one matches
-6. Single HTML tag (`warpSessionTag`)
-7. Multiple HTML tags (`warpSessionTags`) - tries each until one matches
+1. CSS selectors (`selectors`) - tries each until one matches
+2. ID selectors (`selectorIds`) - collects all matching elements
+3. CSS classes (`warpSessionClasses`) - collects all matching elements
+4. HTML tags (`warpSessionTags`) - collects all matching elements
+
 
 ## Error Handling
 
 - **Automatic Retry**: Network errors and 5xx responses trigger up to 3 retries with exponential backoff (1s, 2s, 4s)
-- **Network Errors**: After retries exhausted, logged as failed pages in `skipped-pages.js`
 - **Missing Selectors**: Pages skipped and recorded in `skipped-pages.js`
 - **Invalid URLs**: Handled gracefully with error logging
 - **Timeout**: 30-second timeout per page request
@@ -220,12 +198,3 @@ Scraping 3 out of 100...
 Wrote output-data.js with 95 records
 Wrote skipped-pages.js with 5 records
 ```
-
-## Dependencies
-
-- `axios`: HTTP requests
-- `axios-retry`: Automatic retry with exponential backoff
-- `cheerio`: HTML parsing and DOM manipulation
-- `p-limit`: Concurrency control for parallel requests
-- `turndown`: HTML to Markdown conversion
-- `xml2js`: XML parsing for sitemaps
